@@ -97,7 +97,7 @@ test('cutoff is ordering day at 15:00 Yekaterinburg',()=>{
 test('no external runtime endpoints or auto-refund entries',()=>{
   assert.doesNotMatch(app.replaceAll('http://www.w3.org/2000/svg',''),/\bfetch\s*\(|XMLHttpRequest|https?:\/\//);
   assert.doesNotMatch(app,/Вернётся по СБП|вернутся по СБП|addHistory\([^;\n]*Возврат/);
-  assert.match(app,/столовую «Тимьян»/);
+  assert.match(app,/чат «ITIS обеды» в Telegram или MAX/);
   const html=readFileSync(new URL('index.html',root),'utf8');
   assert.match(html,/connect-src 'none'/);
 });
