@@ -1,0 +1,13 @@
+{
+  "name": "is-food-prototype",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IS.Food interactive UI handoff — mock data, no real transactions",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
