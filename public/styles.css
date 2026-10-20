@@ -24,3 +24,52 @@
   .login{min-height:100dvh;display:grid;place-items:center;padding:20px}.login .card{max-width:400px;width:100%}.login label{display:block;font-size:14px;margin-top:16px}.login input{display:block;width:100%;border:1px solid #d5deeb;border-radius:10px;padding:12px;margin-top:6px}.login button{margin-top:20px;width:100%}
   @media(max-width:360px){.brand{font-size:19px}.head{padding-left:12px;padding-right:12px}.balance{padding:0;font-size:12px}.user-name{font-size:12px}.balance strong{font-size:13px}.logout{padding:7px 10px}main{padding-left:12px;padding-right:12px}.card{padding:15px}}
   @media(min-width:641px){main.has-bar{padding-bottom:32px}.bar{position:sticky;bottom:16px;border:1px solid #dce3ed;border-radius:14px;margin-top:20px}.bar .primary{max-width:320px}.card{padding:24px}}
+  .head-row{grid-template-rows:21px 27px}
+  .head-row .account-switch{color:white;background:transparent;border:0;border-radius:6px;min-height:27px;max-width:100%;width:max-content;gap:4px;font-weight:400;text-align:left}
+  .account-switch:hover{background:#ffffff20}
+  .account-switch .chevron{font-size:16px;line-height:16px;margin-left:2px}
+  .account-switch .chevron:before{content:none}
+  .account-switch .user-name{flex:0 1 auto}
+  .account-switch>span:nth-child(2){flex-shrink:0}
+  .account-list{display:grid;gap:8px;margin-top:18px}
+  .account-option{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;color:#182439;padding:12px;font-weight:400}
+  .account-option>span:first-child{min-width:0;overflow-wrap:anywhere}
+  .account-option small{display:block;font-size:12px;color:#647086;margin-top:4px}
+  .account-option.is-current{background:#edf3ff;border-color:#2857af}
+  .account-mark{color:#2857af;flex:none}
+  .account-form label{display:block;font-size:14px;margin-top:16px}
+  .account-form input{display:block;width:100%;border:1px solid #d5deeb;border-radius:10px;padding:12px;margin-top:6px}
+  .order-owner{display:block;font-size:11px;font-weight:400;line-height:16px;overflow-wrap:anywhere}
+  .profile-account-switch{margin-top:14px}
+  .identity>div{min-width:0;overflow-wrap:anywhere}.avatar{flex-shrink:0}
+  @media(max-width:640px){.profile-account-switch{width:100%}}
+  @media(max-width:400px){.head-row{column-gap:6px}.head-row .logout{padding:7px 9px}.account-switch .user-name{max-width:112px}}
+  .head-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .brand-block{display:flex;flex-direction:column;flex-shrink:0;gap:1px}
+  .header-balance{font-size:12px;line-height:18px;white-space:nowrap}
+  .user-menu-wrap{position:relative;min-width:0;max-width:65%}
+  .user-menu-toggle{display:flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:9px 11px;color:white;background:transparent;border-color:#ffffff60;font-size:13px}
+  .user-menu-toggle:hover,.user-menu-toggle[aria-expanded="true"]{background:#ffffff20}
+  .user-icon,.menu-chevron{flex-shrink:0}
+  .user-menu-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .menu-chevron{display:block;line-height:16px;font-size:17px;transition:transform .15s}
+  .user-menu-toggle[aria-expanded="true"] .menu-chevron{transform:rotate(180deg)}
+  .quick-accounts{position:absolute;z-index:40;right:0;top:calc(100% + 8px);width:280px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 80px);overflow:auto;padding:6px;background:white;border:1px solid #dce3ed;border-radius:12px;box-shadow:0 8px 28px #14203926;color:#182439}
+  .quick-accounts[hidden]{display:none}
+  .quick-account{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px;border:0;text-align:left;color:#182439;font-size:14px;font-weight:400}
+  .quick-account>span:first-child{min-width:0;overflow-wrap:anywhere}
+  .quick-account small{display:block;margin-top:4px;font-size:12px;color:#647086}
+  .quick-account.is-current{background:#edf3ff;color:#2857af}
+  .quick-account:hover,.quick-logout:hover{background:#f0f4fa}
+  .quick-divider{height:1px;background:#dce3ed;margin:6px 4px}
+  .quick-logout{width:100%;border:0;text-align:left;font-size:14px;font-weight:500;color:#a7342a}
+  .quick-add{color:#2857af;font-weight:600}
+  .profile-intro{align-items:center}
+  .header-avatar{width:26px;height:26px;font-size:11px;line-height:1}
+  .user-menu-toggle{padding-top:8px;padding-bottom:8px;align-items:center}
+  .user-menu-name{line-height:20px}
+  .menu-chevron{width:16px;height:16px;align-self:center}
+  .password-field{position:relative;margin-top:6px}
+  .login .password-field input,.account-form .password-field input{margin-top:0;padding-right:52px}
+  .password-field .password-toggle{position:absolute;right:2px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;margin:0;border:0;border-radius:8px;background:transparent;color:#647086}
+  .password-field .password-toggle:hover{background:#edf3ff;color:#2857af}
