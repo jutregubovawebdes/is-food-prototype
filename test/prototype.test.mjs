@@ -16,7 +16,8 @@ test('all scripts parse',()=>{
 });
 test('initial state has 500 rubles and no orders or selected quantities',()=>{
   const initial=app.slice(app.indexOf("  let page="),app.indexOf('  function canChangeOrder'));
-  const state=vm.runInNewContext(initial+'\n({balance,current,past,history,counts,sequence,cash,editing})',{data:[{},{},{}]});
+  const state=vm.runInNewContext(initial+'\n({page,balance,current,past,history,counts,sequence,cash,editing})',{data:[{},{},{}]});
+  assert.equal(state.page,'menu');
   assert.equal(state.balance,500);
   assert.equal(state.current,null);
   assert.equal(state.past.length,0);
@@ -34,7 +35,7 @@ test('accounts isolate orders, balances, drafts and history across switching and
   assert.equal(run('accounts.filter(a=>a.connected).length'),2);
   assert.equal(run('activeAccount.name'),'Иван Иванов');
   assert.equal(run('accounts[1].name'),'Анна Петрова');
-  run("counts[0]=1; cash=true; signIn('anna@food.local')");
+  run("page='profile'; counts[0]=1; cash=true; signIn('anna@food.local')");
   assert.equal(run('page'),'profile');
   assert.equal(run('activeAccount.name'),'Анна Петрова');
   assert.equal(run('balance'),500);
