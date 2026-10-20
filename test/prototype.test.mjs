@@ -14,6 +14,18 @@ vm.runInContext(logic,ctx);
 test('all scripts parse',()=>{
   for(const f of ['app.js','config.js','fixtures.js'])new vm.Script(readFileSync(new URL(f,root),'utf8'),{filename:f});
 });
+test('initial state has 500 rubles and no orders or selected quantities',()=>{
+  const initial=app.slice(app.indexOf("  let page="),app.indexOf('  function canChangeOrder'));
+  const state=vm.runInNewContext(initial+'\n({balance,current,past,history,counts,sequence,cash,editing})',{data:[{},{},{}]});
+  assert.equal(state.balance,500);
+  assert.equal(state.current,null);
+  assert.equal(state.past.length,0);
+  assert.equal(state.history.length,0);
+  assert.deepEqual(Array.from(state.counts),[0,0,0]);
+  assert.equal(state.sequence,1);
+  assert.equal(state.cash,false);
+  assert.equal(state.editing,false);
+});
 test('meal date skips weekend',()=>{
   assert.equal(ctx.nextMealDate('20.10.2026'),'21.10.2026');
   assert.equal(ctx.nextMealDate('23.10.2026'),'26.10.2026');

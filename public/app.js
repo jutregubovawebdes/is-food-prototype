@@ -16,15 +16,10 @@
   const menuDate=nextMealDate(today);
   const stamp=()=>today+', '+clock().toLocaleTimeString('ru-RU',{timeZone:config.timeZone,hour:'2-digit',minute:'2-digit'});
   const data=sets.map(s=>({...s,cost:parseInt(s.price.replace(/\s/g,''))}));
-  let page='profile',balance=252,selected=0,counts=data.map(()=>0),editing=false,cash=false,modal=null,notice='',busy=false,logged=true,sequence=4;
-  let current={id:3,selected:2,qty:1,total:248,debit:248,due:0,paid:0,date:menuDate,orderDate:today};
-  const past=[{id:2,selected:0,qty:1,total:497,date:'16.10.2026',orderDate:'15.10.2026'}];
-  const history=[
-    {amount:-3,text:'Сгорание остатка перед начислением',date:'19.10.2026, 00:01'},
-    {amount:500,text:'Еженедельное начисление',date:'19.10.2026, 00:01'},
-    {amount:-497,text:'Списание за заказ №2',date:'15.10.2026, 15:10'},
-    {amount:500,text:'Еженедельное начисление',date:'13.10.2026, 16:21'}
-  ];
+  let page='profile',balance=500,selected=0,counts=data.map(()=>0),editing=false,cash=false,modal=null,notice='',busy=false,logged=true,sequence=1;
+  let current=null;
+  const past=[];
+  const history=[];
   function canChangeOrder(o,now=clock()){
     if(!o)return false;
     const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Yekaterinburg',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
