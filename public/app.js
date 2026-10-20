@@ -20,15 +20,21 @@
   let current=null;
   let past=[];
   let history=mockHistory('user@food.local');
-  const accounts=[
-    makeAccount('user@food.local','Иван Иванов','1771'),
-    makeAccount('anna@food.local','Анна Петрова','2384')
-  ];
-  let activeAccount=accounts[0];
+  const employee={name:'Иван Иванов',login:'ivan.ivanov',primaryCard:'1771'};
+  const paymentUrl='https://qr.nspk.ru/AS1A003JV14RD88D8I3P5RP7CHRVCP9U?type=01&bank=100000000111&crc=6C46';
+  const cardDirectory={
+    '1771':{name:'Иван Иванов',balance:500,historyKey:'user@food.local'},
+    '2384':{name:'Анна Петрова',balance:500,historyKey:'anna@food.local'},
+    '3096':{name:'Алексей Смирнов',balance:500,historyKey:'alex@food.local'}
+  };
+  const cards=[makeCard('1771'),makeCard('2384')];
+  let activeCard=cards[0];
   let modalReturnFocus='account-switch';
   let quickOpen=false;
-  function makeAccount(email,name,card){
-    return {email,name,card,connected:true,state:{balance:500,selected:0,counts:data.map(()=>0),editing:false,cash:false,current:null,past:[],history:mockHistory(email),sequence:1}};
+  let cardError='',cardInput='',removeCardNumber=null;
+  function makeCard(card){
+    const record=cardDirectory[card];
+    return {name:record.name,card,connected:true,state:{balance:record.balance,selected:0,counts:data.map(()=>0),editing:false,cash:false,current:null,past:[],history:mockHistory(record.historyKey),sequence:1}};
   }
   function mockHistory(email){
     // Completed past operations only. SBP is paid separately, not from the card.
@@ -49,50 +55,64 @@
     ];
     return [];
   }
-  function saveAccount(){
-    if(activeAccount)activeAccount.state={balance,selected,counts,editing,cash,current,past,history,sequence};
+  function saveCard(){
+    if(activeCard)activeCard.state={balance,selected,counts,editing,cash,current,past,history,sequence};
   }
-  function loadAccount(account){
-    activeAccount=account;
-    ({balance,selected,counts,editing,cash,current,past,history,sequence}=account.state);
-    logged=true;modal=null;quickOpen=false;notice='';busy=false;
+  function loadCard(card){
+    activeCard=card;
+    ({balance,selected,counts,editing,cash,current,past,history,sequence}=card?card.state:{balance:0,selected:0,counts:data.map(()=>0),editing:false,cash:false,current:null,past:[],history:[],sequence:1});
+    modal=null;quickOpen=false;notice='';busy=false;
   }
-  function switchAccount(email){
-    const account=accounts.find(a=>a.email===email&&a.connected);
-    if(!account)return;
-    saveAccount();loadAccount(account);render(modalReturnFocus);
+  function switchCard(number){
+    const card=cards.find(a=>a.card===number&&a.connected);
+    if(!logged||!card)return;
+    saveCard();loadCard(card);render(modalReturnFocus);
   }
-  function signIn(email){
-    const returnPage=logged?page:'menu';
-    email=email.trim().toLowerCase();
-    let account=accounts.find(a=>a.email===email);
-    if(!account){
-      const presets={'anna@food.local':['Анна Петрова','2384'],'alex@food.local':['Алексей Смирнов','3096']};
-      const [name,card]=presets[email]||[email.split('@')[0],String(4000+accounts.length)];
-      account=makeAccount(email,name,card);accounts.push(account);
-    }
-    saveAccount();account.connected=true;loadAccount(account);page=returnPage;render(modalReturnFocus);
+  function addCard(number){
+    if(!logged)return false;
+    cardInput=number.trim();cardError='';
+    if(!/^\d+$/.test(cardInput)){cardError='Введите номер карты цифрами.';return false}
+    if(!Object.hasOwn(cardDirectory,cardInput)){cardError='Карта не найдена. Проверьте номер.';return false}
+    let card=cards.find(a=>a.card===cardInput);
+    if(card?.connected){cardError='Эта карта уже добавлена.';return false}
+    if(!card){card=makeCard(cardInput);cards.push(card)}
+    saveCard();card.connected=true;loadCard(card);cardInput='';notice='Карта добавлена.';return true;
+  }
+  function removeCard(number){
+    if(!logged||number===employee.primaryCard)return;
+    const card=cards.find(a=>a.card===number&&a.connected);
+    if(!card)return;
+    saveCard();card.connected=false;
+    if(card===activeCard)loadCard(cards.find(a=>a.connected)||null);
+    modal=null;removeCardNumber=null;notice='Карта удалена из вашего аккаунта. Заказы и история сохранены.';
+  }
+  function signIn(){
+    logged=true;page='menu';modal=null;notice='';render();
   }
   function logoutAccount(){
-    saveAccount();activeAccount.connected=false;
-    const next=accounts.find(a=>a.connected);
-    if(next)loadAccount(next);
-    else{logged=false;modal=null;notice='';busy=false}
-    render(next?'account-switch':undefined);
+    saveCard();logged=false;modal=null;quickOpen=false;notice='';busy=false;render();
   }
-  const initials=()=>activeAccount.name.split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+  const initials=(name=activeCard?.name||employee.name)=>name.split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
   function passwordIcon(visible){
     return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>${visible?'<path d="m3 3 18 18"/>':''}</svg>`;
   }
-  function loginFields(email){
-    return `<label>Email<input name="email" type="email" value="${esc(email)}" required autocomplete="off"></label><label for="signin-password">Пароль</label><div class="password-field"><input id="signin-password" name="password" type="password" value="password" required autocomplete="off"><button type="button" class="password-toggle" id="password-toggle" aria-label="Показать пароль" title="Показать пароль" aria-controls="signin-password">${passwordIcon(false)}</button></div>`;
+  function loginFields(){
+    return `<label>Логин сотрудника<input name="login" value="${esc(employee.login)}" required autocomplete="off"></label><label for="signin-password">Пароль</label><div class="password-field"><input id="signin-password" name="password" type="password" value="password" required autocomplete="off"><button type="button" class="password-toggle" id="password-toggle" aria-label="Показать пароль" title="Показать пароль" aria-controls="signin-password">${passwordIcon(false)}</button></div>`;
   }
   function quickMenu(){
-    return `<div class="quick-accounts" id="quick-accounts" role="menu" aria-label="Выбор пользователя" ${quickOpen?'':'hidden'}>${accounts.filter(a=>a.connected).map((a,i)=>`<button id="quick-account-${i}" class="quick-account ${a===activeAccount?'is-current':''}" role="menuitemradio" aria-checked="${a===activeAccount}" tabindex="-1" data-account="${esc(a.email)}"><span><strong>${esc(a.name)}</strong><small>Остаток ${money(a.state.balance)}</small></span><span aria-hidden="true">${a===activeAccount?'✓':''}</span></button>`).join('')}<button id="quick-add-account" class="quick-account quick-add" role="menuitem" tabindex="-1">＋ Добавить аккаунт</button><div class="quick-divider" role="separator"></div><button id="logout" class="quick-logout" role="menuitem" tabindex="-1">Выйти</button></div>`;
+    return `<div class="quick-accounts" id="quick-cards" role="menu" aria-label="Выбор карты" ${quickOpen?'':'hidden'}>${cards.filter(a=>a.connected).map((a,i)=>`<button id="quick-account-${i}" class="quick-account ${a===activeCard?'is-current':''}" role="menuitemradio" aria-checked="${a===activeCard}" tabindex="-1" data-card="${esc(a.card)}"><span><strong>${esc(a.name)}</strong><small>Карта №${esc(a.card)} · ${money(a.state.balance)}</small></span><span aria-hidden="true">${a===activeCard?'✓':''}</span></button>`).join('')}<button id="quick-add-account" class="quick-account quick-add quick-action" role="menuitem" tabindex="-1">${menuIcon('add')}<span>Добавить карту</span></button><button id="manage-cards" class="quick-account quick-action" role="menuitem" tabindex="-1">${menuIcon('cards')}<span>Управление картами</span></button><div class="quick-divider" role="separator"></div><button id="logout" class="quick-logout quick-action" role="menuitem" tabindex="-1">${menuIcon('logout')}<span>Выйти из аккаунта</span></button></div>`;
+  }
+  function menuIcon(kind){
+    const paths={
+      add:'<path d="M12 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5M2 10h20M16 18h6M19 15v6"/>',
+      cards:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M3 12h18M7 3h10M7 17h3"/>',
+      logout:'<path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M9 12h12m-4-4 4 4-4 4"/>'
+    };
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]}</svg>`;
   }
   function closeQuickMenu(restoreFocus=false){
     quickOpen=false;
-    document.getElementById('quick-accounts')?.setAttribute('hidden','');
+    document.getElementById('quick-cards')?.setAttribute('hidden','');
     document.getElementById('account-switch')?.setAttribute('aria-expanded','false');
     if(restoreFocus)document.getElementById('account-switch')?.focus();
   }
@@ -123,23 +143,28 @@
   const itemRows=o=>orderItems(o).map(i=>`<div class="line"><span>${esc(data[i.selected].title)} × ${i.qty}</span></div>`).join('');
   function totals(){const total=counts.reduce((sum,qty,i)=>sum+data[i].cost*qty,0),available=balance+(editing&&current?current.debit:0),debit=Math.min(total,Math.max(0,available)),due=total-debit,previousPaid=editing&&current?current.paid:0;return{total,available,debit,due,toPay:Math.max(0,due-previousPaid),paid:previousPaid,refund:Math.max(0,previousPaid-due)}}
   function orderCard(o,controls=true){return `<section class="card saved"><div class="card-title"><h2>Ваш заказ №${o.id}</h2></div><p class="meta">Заказ на ${esc(o.date)}</p>${itemRows(o)}<div class="line"><span>Стоимость заказа</span><strong>${money(o.total)}</strong></div><div class="line"><span>С баланса</span><strong>${money(o.debit)}</strong></div>${o.due?`<div class="line"><span>За деньги${o.paid>=o.due?' · оплачено':''}</span><strong>${money(o.due)}</strong></div>`:''}${o.due>o.paid?'<button class="wide" id="pay-open" style="margin-top:12px">Оплатить по СБП</button>':''}${o.paid>o.due?`<p class="muted" style="margin-top:12px">Для возврата переплаты ${money(o.paid-o.due)} напишите в чат «ITIS обеды» в Telegram или MAX.</p>`:''}${controls?'<div class="actions"><button id="edit">Изменить заказ</button><button id="cancel" class="danger">Отменить заказ</button></div>':''}</section>`}
+  function emptyCards(){return '<section class="card section"><h2>Добавьте карту</h2><p class="muted">Введите номер карты, чтобы увидеть владельца, остаток и заказать обед.</p><button id="empty-add-card" class="primary wide" style="margin-top:16px">Добавить карту</button></section>'}
   function menu(){
+    if(!activeCard)return '<main><div class="intro"><h1>Меню на '+esc(menuDate)+'</h1></div>'+emptyCards()+'</main>';
     const t=totals(),s=data[selected],saved=current&&!editing;
     return `<main class="has-bar"><div class="intro"><div><h1>Меню на ${esc(menuDate)}</h1><p class="deadline">Заказать до 15:00 ${esc(today)}</p></div><button id="refresh" class="refresh" ${busy?'disabled':''}>${busy?'Обновляем…':'Обновить'}</button></div>${notice?`<div class="notice" role="status">${esc(notice)}</div>`:''}
     ${saved?orderCard(current):`<div class="tabs" role="tablist" aria-label="Выберите комплекс">${data.map((s,i)=>`<button class="tab ${selected===i?'active':''}" id="set-${i}" role="tab" aria-selected="${selected===i}" aria-controls="menu-panel">№${i+1} · <strong>${esc(s.price)}</strong>${counts[i]?`<span class="count-badge">${counts[i]}</span>`:''}</button>`).join('')}</div><section class="card" id="menu-panel" role="tabpanel" aria-labelledby="set-${selected}"><div class="card-title"><h2>${esc(s.title)}</h2><span class="price">${esc(s.price)}</span></div><div class="quantity"><span>В заказе</span><div class="stepper"><button id="minus" aria-label="Уменьшить количество" ${counts[selected]===0?'disabled':''}>−</button><output aria-live="polite">${counts[selected]}</output><button id="plus" aria-label="Увеличить количество" ${counts[selected]>=5?'disabled':''}>+</button></div></div><ul class="dishes">${s.dishes.map(d=>{const m=d.name.match(/^(.+?)\s*\((.+)\)$/);let name=m?m[1]:d.name;if(name==='ВИНЕГРЕТ')name='Винегрет';return `<li><p class="dish-name">${esc(name)}</p>${m?`<p class="ingredients">${esc(m[2])}</p>`:''}<p class="dish-meta">${d.portion!=='-'?esc(d.portion.replace('1 кус','1 кусочек'))+' · ':''}${esc(d.price)}</p></li>`}).join('')}</ul></section>`}
-    <div class="bar"><div class="bar-inner">${saved?`<div class="bar-row"><div><div class="total-label">${current.due>current.paid?'Доплата по СБП':'Стоимость заказа'}</div><div class="total">${money(current.due>current.paid?current.due-current.paid:current.total)}</div></div><button class="primary" id="${current.due>current.paid?'pay-bottom':'edit-bottom'}">${current.due>current.paid?'Оплатить':'Изменить'}</button></div>`:`${t.toPay?`<div class="warning">Не хватает ${money(t.toPay)}.</div><label class="cash-option"><input type="checkbox" id="cash" ${cash?'checked':''}><span>Оплачу разницу за деньги<small>С баланса ${money(t.debit)} · доплата по СБП ${money(t.toPay)}</small></span></label>`:''}${editing?`<p class="helper">Предыдущая сумма заказа ${money(current.debit)} учтена в расчёте.${current.paid?' По СБП оплачено '+money(current.paid)+'.':''}${t.refund?' Для возврата переплаты '+money(t.refund)+' напишите в чат «ITIS обеды» в Telegram или MAX.':''}</p>`:''}${basketItems().length?`<p class="helper basket-summary">В заказе: ${itemSummary(basketItems())}</p>`:''}<div class="bar-row"><div><div class="total-label">Итого</div><div class="total" aria-live="polite">${money(t.total)}</div></div><button id="save" class="primary" ${!canChangeOrder({orderDate:today})||!t.total||t.toPay&&!cash?'disabled':''}>${editing?'Сохранить':'Заказать'}<small class="order-owner">${esc(activeAccount.name)}</small></button></div>${editing?'<button id="discard" class="wide" style="margin-top:8px">Не менять заказ</button>':''}`}</div></div></main>`;
+    <div class="bar"><div class="bar-inner">${saved?`<div class="bar-row"><div><div class="total-label">${current.due>current.paid?'Доплата по СБП':'Стоимость заказа'}</div><div class="total">${money(current.due>current.paid?current.due-current.paid:current.total)}</div></div><button class="primary" id="${current.due>current.paid?'pay-bottom':'edit-bottom'}">${current.due>current.paid?'Оплатить':'Изменить'}</button></div>`:`${t.toPay?`<div class="warning">Не хватает ${money(t.toPay)}.</div><label class="cash-option"><input type="checkbox" id="cash" ${cash?'checked':''}><span>Оплачу разницу за деньги<small>С баланса ${money(t.debit)} · доплата по СБП ${money(t.toPay)}</small></span></label>`:''}${editing?`<p class="helper">Предыдущая сумма заказа ${money(current.debit)} учтена в расчёте.${current.paid?' По СБП оплачено '+money(current.paid)+'.':''}${t.refund?' Для возврата переплаты '+money(t.refund)+' напишите в чат «ITIS обеды» в Telegram или MAX.':''}</p>`:''}${basketItems().length?`<p class="helper basket-summary">В заказе: ${itemSummary(basketItems())}</p>`:''}<div class="bar-row"><div><div class="total-label">Итого</div><div class="total" aria-live="polite">${money(t.total)}</div></div><button id="save" class="primary" ${!canChangeOrder({orderDate:today})||!t.total||t.toPay&&!cash?'disabled':''}>${editing?'Сохранить':'Заказать'}<small class="order-owner">${esc(activeCard.name)} · №${esc(activeCard.card)}</small></button></div>${editing?'<button id="discard" class="wide" style="margin-top:8px">Не менять заказ</button>':''}`}</div></div></main>`;
   }
-  function profile(){const orders=[...(current?[current]:[]),...past];const dates=[...new Set(orders.map(o=>o.date))];return `<main><div class="intro profile-intro"><h1>Профиль</h1><button id="refresh" class="refresh" ${busy?'disabled':''}>${busy?'Обновляем…':'Обновить'}</button></div>${notice?`<div class="notice" role="status">${esc(notice)}</div>`:''}<section class="card section"><div class="identity"><span class="avatar">${esc(initials())}</span><div><h2>${esc(activeAccount.name)}</h2><p class="meta">${esc(activeAccount.email)}</p></div></div><button id="profile-account-switch" class="profile-account-switch" aria-haspopup="dialog">Сменить аккаунт</button><dl class="fields"><div><dt>Расчётный остаток</dt><dd>${money(balance)}</dd></div><div><dt>Карта</dt><dd>${esc(activeAccount.card)}</dd></div><div><dt>Отдел</dt><dd>IT</dd></div><div><dt>Роль</dt><dd>Пользователь</dd></div></dl><p class="muted" style="margin-top:12px">Остаток рассчитан с учётом ваших заказов. Фактический баланс карты обновится утром в день, на который оформлен заказ.</p></section>${dates.map(date=>`<section class="section"><h2>Мои заказы на ${esc(date)}</h2>${orders.filter(o=>o.date===date).map(o=>`<button class="order-row" data-order="${o.id}"><div class="order-top"><strong>Заказ №${o.id}</strong><strong>${money(o.total)}</strong></div><p class="meta">${o.date} · ${itemSummary(orderItems(o))}</p></button>`).join('')}</section>`).join('')}<section class="section"><h2>История операций</h2><ul class="ledger">${history.map(h=>`<li><div>${esc(h.text)}<small>${esc(h.date)}</small></div><span class="amount ${h.amount>0?'positive':''}">${h.amount>0?'+':'−'}${money(Math.abs(h.amount))}</span></li>`).join('')}</ul></section></main>`}
+  function profile(){if(!activeCard)return `<main><div class="intro profile-intro"><h1>Профиль</h1></div><section class="card section"><h2>${esc(employee.name)}</h2><p class="meta">Аккаунт сотрудника · ${esc(employee.login)}</p><dl class="fields"><div><dt>Основная карта</dt><dd>№${esc(employee.primaryCard)}</dd></div></dl><button id="profile-logout" class="wide" style="margin-top:12px">Выйти из аккаунта</button></section>${emptyCards()}</main>`;const orders=[...(current?[current]:[]),...past];const dates=[...new Set(orders.map(o=>o.date))];return `<main><div class="intro profile-intro"><h1>Профиль</h1><button id="refresh" class="refresh" ${busy?'disabled':''}>${busy?'Обновляем…':'Обновить'}</button></div><section class="card section"><div class="identity"><span class="avatar">${esc(initials(employee.name))}</span><div><h2>${esc(employee.name)}</h2><p class="meta">Аккаунт сотрудника · ${esc(employee.login)}</p></div></div><dl class="fields"><div><dt>Основная карта</dt><dd>№${esc(employee.primaryCard)}</dd></div></dl><button id="profile-logout" class="wide" style="margin-top:12px">Выйти из аккаунта</button></section>${notice?`<div class="notice" role="status">${esc(notice)}</div>`:''}<section class="card section"><p class="meta" style="margin-bottom:12px">Выбранная карта</p><div class="identity"><span class="avatar">${esc(initials())}</span><div><h2>${esc(activeCard.name)}</h2><p class="meta">Карта №${esc(activeCard.card)}</p></div></div><button id="profile-account-switch" class="profile-account-switch" aria-haspopup="dialog">Управление картами</button><dl class="fields"><div><dt>Расчётный остаток</dt><dd>${money(balance)}</dd></div><div><dt>Карта</dt><dd>${esc(activeCard.card)}</dd></div></dl><p class="muted" style="margin-top:12px">Остаток рассчитан с учётом ваших заказов. Фактический баланс карты обновится утром в день, на который оформлен заказ.</p></section>${dates.map(date=>`<section class="section"><h2>Заказы по карте на ${esc(date)}</h2>${orders.filter(o=>o.date===date).map(o=>`<button class="order-row" data-order="${o.id}"><div class="order-top"><strong>Заказ №${o.id}</strong><strong>${money(o.total)}</strong></div><p class="meta">${o.date} · ${itemSummary(orderItems(o))}</p></button>`).join('')}</section>`).join('')}<section class="section"><h2>История операций по карте</h2><ul class="ledger">${history.map(h=>`<li><div>${esc(h.text)}<small>${esc(h.date)}</small></div><span class="amount ${h.amount>0?'positive':''}">${h.amount>0?'+':'−'}${money(Math.abs(h.amount))}</span></li>`).join('')}</ul></section></main>`}
   function dialog(){
     if(!modal)return '';
     let content='';
-    if(modal==='pay')content=`<h2 id="dialog-title">Доплатите по СБП</h2><p>Заказ №${current.id} сохранён. Переведите оставшуюся сумму:</p><div class="payment-total">${money(current.due-current.paid)}</div><div class="qr">${qr()}</div><p class="small">Отсканируйте QR-код в банковском приложении и оплатите. После оплаты уведомите об этом в чате «ITIS обеды» в Telegram или MAX, затем нажмите «Подтверждаю оплату».</p><p class="payment-note">В комментарии к платежу укажите свой номер карты Тимьян: <strong>${esc(activeAccount.card)}</strong>.</p><div class="actions"><button id="bank" class="primary">Подтверждаю оплату</button><button id="later">Оплачу позже</button></div>`;
+    if(modal==='pay')content=`<h2 id="dialog-title">Доплатите по СБП</h2><p>Заказ №${current.id} сохранён. Переведите оставшуюся сумму:</p><div class="payment-total">${money(current.due-current.paid)}</div><div class="qr">${qr()}</div><p class="payment-link"><a href="${esc(paymentUrl)}" target="_blank" rel="noopener noreferrer">Открыть оплату ↗</a></p><p class="small">Отсканируйте QR-код в банковском приложении или перейдите по ссылке для оплаты. После оплаты уведомите об этом в чате «ITIS обеды» в Telegram или MAX, затем нажмите «Подтверждаю оплату».</p><p class="payment-note">В комментарии к платежу укажите номер выбранной карты Тимьян: <strong>${esc(activeCard.card)}</strong>.</p><div class="actions"><button id="bank" class="primary">Подтверждаю оплату</button><button id="later">Оплачу позже</button></div>`;
     else if(modal==='cancel')content=`<h2 id="dialog-title">Отменить заказ?</h2><p>Расчётный остаток увеличится на ${money(current.debit)}. Списание за этот заказ не произойдёт.${current.paid?' Для возврата оплаченных '+money(current.paid)+' напишите в чат «ITIS обеды» в Telegram или MAX.':current.due?' Неоплаченная доплата будет отменена.':''}</p><div class="actions"><button id="keep">Оставить заказ</button><button id="cancel-confirm" class="danger">Отменить заказ</button></div>`;
-    else if(modal==='logout')content=`<h2 id="dialog-title">Выйти из аккаунта?</h2><p>${esc(activeAccount.name)} · ${esc(activeAccount.email)}<br>Сохранённые заказы останутся в профиле. Другие аккаунты останутся подключены.</p><div class="actions"><button id="keep">Остаться</button><button id="logout-confirm" class="danger">Выйти</button></div>`;
-    else if(modal==='accounts')content=`<h2 id="dialog-title">Аккаунты</h2><div class="account-list">${accounts.filter(a=>a.connected).map(a=>`<button class="account-option ${a===activeAccount?'is-current':''}" data-account="${esc(a.email)}" ${a===activeAccount?'aria-current="true"':''}><span><strong>${esc(a.name)}</strong><small>${esc(a.email)} · Карта ${esc(a.card)}</small><small>Остаток ${money(a.state.balance)}</small></span><span class="account-mark" aria-hidden="true">${a===activeAccount?'✓':'→'}</span></button>`).join('')}</div><div class="actions"><button id="add-account">＋ Добавить аккаунт</button><button id="keep">Закрыть</button></div>`;
-    else if(modal==='add-account'){
-      const suggested=['alex@food.local','anna@food.local','user@food.local'].find(email=>!accounts.some(a=>a.email===email&&a.connected))||'';
-      content=`<h2 id="dialog-title">Добавить аккаунт</h2><form id="add-account-form" class="account-form">${loginFields(suggested)}<div class="actions"><button type="submit" class="primary">Войти</button><button type="button" id="back-accounts">Назад</button></div></form>`;
+    else if(modal==='logout')content=`<h2 id="dialog-title">Выйти из аккаунта?</h2><p>${esc(employee.name)}<br>Ваши карты и заказы сохранятся в аккаунте.</p><div class="actions"><button id="keep">Остаться</button><button id="logout-confirm" class="danger">Выйти</button></div>`;
+    else if(modal==='cards')content=`<h2 id="dialog-title">Мои карты</h2><div class="account-list">${cards.filter(a=>a.connected).map(a=>`<div class="card-management-row"><button class="account-option ${a===activeCard?'is-current':''}" data-card="${esc(a.card)}" ${a===activeCard?'aria-current="true"':''}><span><strong>${esc(a.name)}</strong><small class="card-summary">Карта №${esc(a.card)} · ${money(a.state.balance)}</small>${a.card===employee.primaryCard?'<small class="primary-card-label">Карта вашего аккаунта</small>':""}</span><span class="account-mark" aria-hidden="true">${a===activeCard?'✓':'→'}</span></button>${a.card===employee.primaryCard?'':`<button class="danger remove-card" data-remove-card="${esc(a.card)}" aria-label="Удалить карту ${esc(a.card)}" title="Удалить карту"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg></button>`}</div>`).join('')}</div><div class="actions"><button id="add-account" class="icon-label-button">${menuIcon('add')}<span>Добавить карту</span></button><button id="keep">Закрыть</button></div>`;
+    else if(modal==='add-card'){
+      content=`<h2 id="dialog-title">Добавить карту</h2><p>Введите номер карты. Имя владельца и остаток загрузятся автоматически.</p><form id="add-card-form" class="account-form"><label for="card-number">Номер карты</label><input id="card-number" name="cardNumber" inputmode="numeric" pattern="[0-9]+" required value="${esc(cardInput)}" placeholder="Введите номер карты" aria-invalid="${!!cardError}" ${cardError?'aria-describedby="card-error"':''}>${cardError?`<p class="field-error" id="card-error" role="alert">${esc(cardError)}</p>`:''}<div class="actions"><button type="submit" class="primary">Добавить карту</button><button type="button" id="back-cards">Назад</button></div></form>`;
+    }
+    else if(modal==='remove-card'){
+      const card=cards.find(a=>a.card===removeCardNumber);
+      content=`<h2 id="dialog-title">Удалить карту?</h2><p>${esc(card.name)} · карта №${esc(card.card)}<br>Карта исчезнет из вашего списка. Заказы не отменятся, остаток и история сохранятся. Карту можно добавить снова по номеру.</p><div class="actions"><button id="remove-card-confirm" class="danger">Удалить карту</button><button id="back-to-cards">Оставить</button></div>`;
     }
     else if(modal==='paid-edit')content='<h2 id="dialog-title">Заказ уже оплачен</h2><p>Для изменения заказа с оплатой по СБП свяжитесь с ответственным за питание.</p><div class="actions"><button id="keep">Понятно</button></div>';
     else if(typeof modal==='object'){const o=modal;content=`<h2 id="dialog-title">Заказ №${o.id}</h2><p>${o.date}</p>${itemRows(o)}<div class="line"><span>Стоимость</span><strong>${money(o.total)}</strong></div><div class="actions"><button id="keep">Закрыть</button></div>`}
@@ -151,20 +176,27 @@
     if(current&&!canChangeOrder(current)&&(editing||modal==='cancel')){
       editing=false;if(modal==='cancel')modal=null;notice=deadlineNotice;
     }
-    saveAccount();
-    root.innerHTML=`${logged?`<div id="screen" ${modal?'inert':''}><header class="header"><div class="head"><div class="head-row"><div class="brand-block"><span class="brand">IS.Food</span><span class="header-balance">Остаток: <strong>${money(balance)}</strong></span></div><div class="user-menu-wrap"><button class="user-menu-toggle" id="account-switch" aria-haspopup="menu" aria-expanded="${quickOpen}" aria-controls="quick-accounts"><span class="avatar header-avatar" aria-hidden="true">${esc(initials())}</span><span class="user-menu-name">${esc(activeAccount.name)}</span><svg class="menu-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${quickMenu()}</div></div><nav aria-label="Разделы"><a href="#menu" id="menu-link" class="${page==='menu'?'active':''}" ${page==='menu'?'aria-current="page"':''}>Меню</a><a href="#profile" id="profile-link" class="${page==='profile'?'active':''}" ${page==='profile'?'aria-current="page"':''}>Профиль</a></nav></div></header>${page==='menu'?menu():profile()}</div>${dialog()}`:`<div class="login"><form class="card" id="login"><span class="brand" style="color:#2857af">IS.Food</span><h1 style="margin-top:16px">Вход</h1><p class="meta">Заказывайте обед до 15:00.</p>${loginFields(activeAccount.email)}<button type="submit" class="primary">Войти</button></form></div>`}`;
+    saveCard();
+    root.innerHTML=`${logged?`<div id="screen" ${modal?'inert':''}><header class="header"><div class="head"><div class="head-row"><div class="brand-block"><span class="brand">IS.Food</span><span class="header-balance">Остаток: <strong>${activeCard?money(balance):"—"}</strong></span></div><div class="user-menu-wrap"><button class="user-menu-toggle" id="account-switch" aria-haspopup="menu" aria-expanded="${quickOpen}" aria-controls="quick-cards"><span class="avatar header-avatar" aria-hidden="true">${esc(initials())}</span><span class="user-menu-name">${activeCard?esc(activeCard.name):"Выбрать карту"}${activeCard?`<small class="header-card-number">Карта №${esc(activeCard.card)}</small>`:""}</span><svg class="menu-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${quickMenu()}</div></div><nav aria-label="Разделы"><a href="#menu" id="menu-link" class="${page==='menu'?'active':''}" ${page==='menu'?'aria-current="page"':''}>Меню</a><a href="#profile" id="profile-link" class="${page==='profile'?'active':''}" ${page==='profile'?'aria-current="page"':''}>Профиль</a></nav></div></header>${page==='menu'?menu():profile()}</div>${dialog()}`:`<div class="login"><form class="card" id="login"><span class="brand" style="color:#2857af">IS.Food</span><h1 style="margin-top:16px">Вход</h1><p class="meta">Войдите под своим аккаунтом сотрудника.</p>${loginFields()}<button type="submit" class="primary">Войти</button></form></div>`}`;
     const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
     on('menu-link',e=>{e.preventDefault();changePage('menu')});on('profile-link',e=>{e.preventDefault();changePage('profile')});
-    on('account-switch',()=>{modalReturnFocus='account-switch';if(quickOpen){closeQuickMenu(true)}else{quickOpen=true;render('quick-account-0')}});
-    on('profile-account-switch',()=>{modalReturnFocus='profile-account-switch';modal='accounts';render()});
-    document.querySelectorAll('[data-account]').forEach(b=>b.addEventListener('click',()=>switchAccount(b.dataset.account)));
-    on('add-account',()=>{modal='add-account';render()});
-    on('quick-add-account',()=>{modalReturnFocus='account-switch';modal='add-account';render()});
-    on('back-accounts',()=>{
+    on('account-switch',()=>{modalReturnFocus='account-switch';if(quickOpen){closeQuickMenu(true)}else{quickOpen=true;render(activeCard?'quick-account-0':'quick-add-account')}});
+    on('profile-account-switch',()=>{modalReturnFocus='profile-account-switch';modal='cards';render()});
+    on('manage-cards',()=>{modal='cards';render()});
+    document.querySelectorAll('[data-card]').forEach(b=>b.addEventListener('click',()=>switchCard(b.dataset.card)));
+    const openAddCard=()=>{cardInput='';cardError='';modal='add-card';render()};
+    on('add-account',openAddCard);
+    on('empty-add-card',openAddCard);
+    on('quick-add-account',()=>{modalReturnFocus='account-switch';openAddCard()});
+    document.querySelectorAll('[data-remove-card]').forEach(b=>b.addEventListener('click',()=>{removeCardNumber=b.dataset.removeCard;modal='remove-card';render()}));
+    on('remove-card-confirm',()=>{removeCard(removeCardNumber);render()});
+    on('back-to-cards',()=>{modal='cards';render()});
+    on('back-cards',()=>{
       if(modalReturnFocus==='account-switch'){modal=null;quickOpen=true;render('quick-add-account')}
-      else{modal='accounts';render()}
+      else{modal='cards';render()}
     });
     on('logout',()=>{modalReturnFocus='account-switch';modal='logout';render()});on('logout-confirm',logoutAccount);
+    on('profile-logout',()=>{modalReturnFocus='profile-logout';modal='logout';render()});
     on('password-toggle',()=>{
       const input=document.getElementById('signin-password'),button=document.getElementById('password-toggle');
       const visible=input.type==='password';
@@ -172,24 +204,28 @@
       const label=visible?'Скрыть пароль':'Показать пароль';
       button.setAttribute('aria-label',label);button.title=label;button.innerHTML=passwordIcon(visible);
     });
-    for(const id of ['login','add-account-form'])document.getElementById(id)?.addEventListener('submit',e=>{
+    document.getElementById('login')?.addEventListener('submit',e=>{
       e.preventDefault();const form=e.currentTarget;
       if(!form.reportValidity())return;
-      const email=form.elements.email.value;
       form.elements.password.value='';
-      signIn(email);
+      signIn();
     });
-    on('refresh',()=>{const refreshingAccount=activeAccount;busy=true;notice='';render();setTimeout(()=>{if(activeAccount!==refreshingAccount||!logged)return;busy=false;notice='Данные обновлены';render('refresh')},450)});
+    document.getElementById('add-card-form')?.addEventListener('submit',e=>{
+      e.preventDefault();const form=e.currentTarget;
+      if(!form.reportValidity())return;
+      addCard(form.elements.cardNumber.value);render();
+    });
+    on('refresh',()=>{const refreshingAccount=activeCard;busy=true;notice='';render();setTimeout(()=>{if(activeCard!==refreshingAccount||!logged)return;busy=false;notice='Данные обновлены';render('refresh')},450)});
     data.forEach((s,i)=>on('set-'+i,()=>{selected=i;notice='';render('set-'+i)}));
     on('minus',()=>{counts[selected]=Math.max(0,counts[selected]-1);cash=false;render('minus')});on('plus',()=>{counts[selected]=Math.min(5,counts[selected]+1);cash=false;render('plus')});
     document.getElementById('cash')?.addEventListener('change',e=>{cash=e.target.checked;render('cash')});
     on('save',()=>{
       if(editing&&!guardChange())return;
       if(!editing&&!canChangeOrder({orderDate:today})){notice='Приём заказов завершён в 15:00.';render();return;}
-      const t=totals();if(!t.total||t.toPay&&!cash)return;
+      const t=totals();if(!activeCard||!t.total||t.toPay&&!cash)return;
       const id=editing?current.id:sequence++;
       balance=t.available-t.debit;
-      current={id,items:basketItems(),total:t.total,debit:t.debit,due:t.due,paid:t.paid,date:menuDate,orderDate:today};
+      current={id,cardNumber:activeCard.card,items:basketItems(),total:t.total,debit:t.debit,due:t.due,paid:t.paid,date:menuDate,orderDate:today};
       editing=false;cash=false;notice=t.toPay?'Заказ сохранён. Осталось оплатить разницу.':'Заказ сохранён';modal=t.toPay?'pay':null;render();window.scrollTo(0,0);
     });
     const edit=()=>{if(!guardChange())return;page='menu';counts=data.map(()=>0);orderItems(current).forEach(i=>counts[i.selected]=i.qty);selected=orderItems(current)[0].selected;editing=true;cash=false;notice='';render();window.scrollTo(0,0)};
@@ -215,18 +251,18 @@
     root.onkeydown=e=>{
       if(quickOpen){
         if(e.key==='Escape'){e.preventDefault();closeQuickMenu(true);return}
-        const items=Array.from(document.querySelectorAll('#quick-accounts button'));
+        const items=Array.from(document.querySelectorAll('#quick-cards button'));
         const index=items.indexOf(document.activeElement);
         if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){
           e.preventDefault();
           const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;
           items[next]?.focus();return;
         }
-      }else if(e.target.id==='account-switch'&&['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();quickOpen=true;render(e.key==='ArrowDown'?'quick-account-0':'logout');return}
+      }else if(e.target.id==='account-switch'&&['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();quickOpen=true;render(e.key==='ArrowDown'?(activeCard?'quick-account-0':'quick-add-account'):'logout');return}
       if(modal&&e.key==='Escape'){modal=null;render(modalReturnFocus)}
-      if(modal&&e.key==='Tab'){const b=Array.from(document.querySelectorAll('.dialog button:not(:disabled), .dialog input:not(:disabled)'));if(e.shiftKey&&document.activeElement===b[0]){e.preventDefault();b.at(-1).focus()}else if(!e.shiftKey&&document.activeElement===b.at(-1)){e.preventDefault();b[0].focus()}}
+      if(modal&&e.key==='Tab'){const b=Array.from(document.querySelectorAll('.dialog button:not(:disabled), .dialog input:not(:disabled), .dialog a[href]'));if(e.shiftKey&&document.activeElement===b[0]){e.preventDefault();b.at(-1).focus()}else if(!e.shiftKey&&document.activeElement===b.at(-1)){e.preventDefault();b[0].focus()}}
     };
-    if(modal)document.querySelector('.dialog input, .dialog button')?.focus({preventScroll:true});
+    if(modal)document.querySelector(modal==='remove-card'?'#back-to-cards':'.dialog input, .dialog button')?.focus({preventScroll:true});
     else if(focus)document.getElementById(focus)?.focus({preventScroll:true});
   }
   render();

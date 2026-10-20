@@ -65,6 +65,8 @@
   .quick-divider{height:1px;background:#dce3ed;margin:6px 4px}
   .quick-logout{width:100%;border:0;text-align:left;font-size:14px;font-weight:500;color:#a7342a}
   .quick-add{color:#2857af;font-weight:600}
+  .quick-action{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-height:44px;padding:10px;border:0;font-size:14px;line-height:20px;font-weight:500;text-align:left}
+  .quick-action svg{display:block;flex:none;width:20px;height:20px}
   .profile-intro{align-items:center}
   .header-avatar{width:26px;height:26px;font-size:11px;line-height:1}
   .user-menu-toggle{padding-top:8px;padding-bottom:8px;align-items:center}
@@ -74,3 +76,15 @@
   .login .password-field input,.account-form .password-field input{margin-top:0;padding-right:52px}
   .password-field .password-toggle{position:absolute;right:2px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;margin:0;border:0;border-radius:8px;background:transparent;color:#647086}
   .password-field .password-toggle:hover{background:#edf3ff;color:#2857af}
+  .header-card-number{display:block;font-size:11px;line-height:14px;font-weight:400;opacity:.9}
+  .user-menu-toggle{padding-top:5px;padding-bottom:5px}
+  .card-management-row{display:flex;align-items:center;gap:8px}
+  .card-management-row .account-option{flex:1;min-width:0}
+  .account-option small.card-summary{white-space:nowrap}
+  .icon-label-button{display:flex;align-items:center;justify-content:center;gap:10px}.icon-label-button svg{display:block;flex:none;width:20px;height:20px}
+  .remove-card{flex:none;display:grid;place-items:center;align-self:stretch;width:44px;height:auto;min-height:44px;padding:0}.remove-card svg{display:block}
+  .account-option small.primary-card-label{color:#2857af;font-weight:500}
+  .field-error{font-size:14px;color:#a7342a;margin:8px 0}
+  .account-form input[aria-invalid="true"]{border-color:#a7342a}
+  .dialog>p.payment-link{margin:0 0 12px;text-align:center}
+  .payment-link a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 16px;color:#2857af;font-size:16px;font-weight:600;text-underline-offset:3px}
